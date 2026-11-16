@@ -81,6 +81,12 @@ working unless it is.
 Aegis tells **zero** apart from **unknown**: too little data shows "insufficient signal" instead of a misleading
 pass rate, and benchmark savings are labelled as benchmarks.
 
+### Connected end to end
+- Deployed with **15 MCP servers connected**, giving the engine end-to-end tool access from planning to
+  verified result.
+- An integrations catalog lists every connected system with a live health probe (*up*, *needs auth*,
+  *unreachable*) and the number of tools each one exposes.
+
 ### Works with any model
 The engine has **no third-party dependencies** (standard library only) and never imports a vendor SDK.
 Adapters cover OpenAI-compatible APIs (OpenAI, Azure, Groq, Together, vLLM, LM Studio, Ollama), Anthropic, and
