@@ -11,6 +11,88 @@ every session because nothing was written down.
 
 ![Overview](docs/screenshots/aegis-overview-dark.png)
 
+## Live architecture
+
+```mermaid
+flowchart TB
+  subgraph Clients
+    direction LR
+    CLI["aegis CLI<br/>plan · run · evolve · recall"]
+    PY["Python API<br/>build_runner()"]
+    UI["Command centre<br/>7 tabs, live refresh"]
+  end
+
+  subgraph Dashboard["aegis — dashboard (Flask)"]
+    direction LR
+    API["HTTP API /api/v1<br/>overview · capabilities · quality<br/>evolution · incidents · traces · execute"]
+    DS["Data sources<br/>read-only views of engine state"]
+    PROBE["Capability probes<br/>import + live demo of all 15"]
+  end
+
+  subgraph Engine["aegis_engine (no dependencies)"]
+    INT["Intent + critique<br/>request → task graph"]
+    POL["Safety policy<br/>confirm gate · destructive-action block"]
+    SCH["Parallel scheduler<br/>topological waves"]
+    RT["Model routing<br/>by task complexity"]
+    CTX["Retrieval + compaction<br/>learned rules within budget"]
+    VER["Verification<br/>acceptance criteria · escalation"]
+    CACHE["Plan / result cache"]
+    EVO["Evolution<br/>strategies · knowledge sets"]
+    TR["Trace + telemetry<br/>token savings"]
+  end
+
+  subgraph Outside["Connected systems"]
+    direction LR
+    LLM["Model providers<br/>OpenAI-compatible · Anthropic · Ollama · CLI"]
+    MCP["15 MCP servers<br/>end-to-end tool access"]
+  end
+
+  STATE[("State directory<br/>strategies · learnings · incidents.db<br/>traces.jsonl · evolution log")]
+
+  CLI --> INT
+  PY --> INT
+  UI --> API --> DS
+  API --> PROBE --> Engine
+  API -- "execute (opt-in + confirm)" --> INT
+  INT --> POL --> SCH --> RT --> CTX
+  CTX --> LLM
+  CTX --> MCP
+  LLM --> VER
+  MCP --> VER
+  VER -- weak result --> RT
+  VER --> CACHE --> EVO --> TR
+  CACHE <--> STATE
+  EVO <--> STATE
+  TR --> STATE
+  CTX -. reads rules .-> STATE
+  DS -. reads .-> STATE
+```
+
+**How a live request flows**
+1. A request arrives from the CLI, the Python API or the command centre's Planner Console.
+2. **Intent and critique** turn it into a dependency-aware task graph and flag missing steps or unsafe verbs.
+3. **Safety policy** stops the run before any cost if it needs confirmation or would do something destructive.
+4. The **scheduler** runs independent tasks in parallel; **routing** picks the cheapest model that fits each
+   task's complexity.
+5. **Retrieval and compaction** inject only the most relevant learned rules within the context budget, then the
+   task runs on the model provider and the connected **MCP tools**.
+6. **Verification** scores the result against acceptance criteria; a weak result is escalated to a stronger
+   model.
+7. Only verified output is **cached**; outcomes feed **evolution**, and every run is **traced** with its token
+   savings.
+8. The **command centre** reads the same state directory read-only and refreshes live, so what you see is what
+   the engine actually did.
+
+**Design rules**
+- **Engine and dashboard are separate packages.** The engine has no third-party dependencies and can be embedded
+  anywhere; the dashboard only reads its state.
+- **One state directory is the single source of truth**: plain JSON, Markdown, JSONL and SQLite files you can
+  read.
+- **Evolution writes data, never code.** Structural suggestions become proposals for a human to review, and a
+  test proves engine source files are untouched by an evolution cycle.
+- **Every model and tool sits behind an adapter**, so changing provider is a configuration change and tests
+  need no network.
+
 ## Features
 
 ### Execution pipeline
